@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Guess Legends - لعبة التخمين</title>
+<style>
+  :root{
+    --bg:#0b0f14;
+    --card:#0f1720;
+    --neon1:#00f0d3;
+    --neon2:#6e9bff;
+    --accent:#ff5ca3;
+    --text:#e6f1f8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; background:linear-gradient(180deg,#071019 0%, #071827 100%);
+    font-family: "Tajawal", Arial, sans-serif; color:var(--text);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+
+  .app{
+    width:100%; max-width:920px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:14px; padding:22px; box-shadow: 0 10px 40px rgba(2,6,23,0.7); border:1px solid rgba(255,255,255,0.03);
+  }
+
+  header{display:flex; align-items:center; gap:16px; margin-bottom:14px}
+  .logo{
+    width:64px; height:64px; border-radius:12px; background:linear-gradient(135deg,var(--neon1),var(--neon2));
+    display:flex; align-items:center; justify-content:center; font-weight:800; color:#04111a; font-size:22px; box-shadow: 0 6px 30px rgba(46, 220, 220, 0.08);
+  }
+  h1{margin:0; font-size:20px; text-shadow:0 2px 18px rgba(0,240,211,0.06)}
+  p.lead{margin:4px 0 0 0; color:rgba(230,241,248,0.7); font-size:13px}
+
+  .center{display:flex; gap:14px; margin-top:16px}
+  .panel{flex:1; background:var(--card); padding:14px; border-radius:12px; min-height:260px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start}
+  .panel.small{max-width:320px}
+
+  /* category buttons */
+  .cats{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:10px}
+  .cat-btn{
+    padding:10px 14px; border-radius:10px; background:transparent; color:var(--text);
+    border:1px solid rgba(255,255,255,0.04); cursor:pointer; transition:all .18s; min-width:120px;
+  }
+  .cat-btn:hover{transform:translateY(-4px); box-shadow:0 6px 30px rgba(110,155,255,0.06)}
+  .cat-btn.active{background:linear-gradient(90deg,var(--neon1),var(--neon2)); color:#04111a; font-weight:700; border: none}
+
+  .hint{font-size:18px; margin-top:8px; color:#dff7f0; text-align:center}
+  .progress{width:100%; height:10px; background:rgba(255,255,255,0.03); border-radius:10px; margin-top:12px; overflow:hidden}
+  .progress > span{display:block; height:100%; background:linear-gradient(90deg,var(--neon1),var(--neon2)); width:0%}
+
+  .choices{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; width:100%; margin-top:12px}
+  .choice{
+    background:#0a1016; padding:12px; border-radius:10px; cursor:pointer; border:1px solid rgba(255,255,255,0.03);
+    transition:all .14s; text-align:center; font-weight:600;
+  }
+  .choice:hover{transform:translateY(-3px)}
+  .choice.correct{background:linear-gradient(90deg,#12ffb0,#7cc1ff); color:#05141a}
+  .choice.wrong{background:rgba(255,90,90,0.14); color:#ffdfe0; border-color:rgba(255,90,90,0.2)}
+
+  #character-img{width:220px; max-width:90%; margin-top:14px; border-radius:12px; display:none; box-shadow:0 8px 36px rgba(0,0,0,0.6)}
+  .controls{display:flex; gap:10px; margin-top:14px; align-items:center}
+  .btn{padding:10px 16px; border-radius:10px; cursor:pointer; border:none; font-weight:700}
+  .btn.primary{background:linear-gradient(90deg,var(--neon1),var(--neon2)); color:#04141a}
+  .btn.ghost{background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.04)}
+
+  .footer{margin-top:14px; color:rgba(230,241,248,0.6); font-size:13px; display:flex; justify-content:space-between; align-items:center}
+  .score{font-weight:800; color:var(--accent)}
+
+  @media (max-width:720px){
+    .center{flex-direction:column}
+    .panel.small{max-width:none}
+    .choices{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="logo">GQ</div>
+      <div>
+        <h1>Guess Legends — لعبة التخمين</h1>
+        <p class="lead">اختَر الفئة وابدأ سلسلة من 10 أسئلة. بعد الإجابة الصحيحة تظهر صورة الشخصية.</p>
+      </div>
+    </header>
+
+    <div class="center">
+      <div class="panel small" id="start-panel">
+        <h3>اختر الفئة</h3>
+        <div class="cats">
+          <button class="cat-btn" data-cat="wrestling">مصارعة</button>
+          <button class="cat-btn" data-cat="football">كرة قدم</button>
+          <button class="cat-btn" data-cat="rap">راب</button>
+          <button class="cat-btn" data-cat="actor">ممثلين</button>
+        </div>
+
+        <div style="margin-top:12px;">
+          <button class="btn primary" id="start-btn">ابدأ اللعبة</button>
+        </div>
+      </div>
+
+      <div class="panel" id="game-panel" style="display:none;">
+        <div style="width:100%; display:flex; justify-content:space-between; align-items:center">
+          <div>السؤال <span id="qnum">1</span> / <span id="qtotal">10</span></div>
+          <div>النقاط: <span class="score" id="score">0</span></div>
+        </div>
+
+        <div class="progress"><span id="progbar"></span></div>
+
+        <div class="hint" id="hint">التلميح هنا</div>
+
+        <div class="choices" id="choices"></div>
+
+        <img id="character-img" alt="صورة الشخصية">
+
+        <div class="controls">
+          <button class="btn ghost" id="skip-btn">تخطي</button>
+          <button class="btn primary" id="next-btn" style="display:none">السؤال التالي</button>
+        </div>
+
+        <div class="footer">
+          <div id="status"></div>
+          <div id="finish-note" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/*
+  بيانات الأسئلة — كل فئة 10 أسئلة.
+  الحقول: hint (نص التلميح)، answer (الاسم الصحيح)، img (رابط صورة مباشر)، choices (مصفوفة اختيارات)
+  المصادر: روابط Wikimedia Commons مباشرة (من أمثلة عامة)
+*/
+const DB = {
+  wrestling: [
+    { hint:"مصارع أمريكي مشهور بشعار 'You Can't See Me' وواجهات على ريسلمانيا", answer:"جون سينا", img:"https://upload.wikimedia.org/wikipedia/commons/6/6f/John_Cena_2012.jpg",
+      choices:["جون سينا","ذا روك","أندرتيكر","راندي أورتن"] },
+    { hint:"أسطورة لقبها 'The Undertaker'، شخصية مظلمة طويلة المدى", answer:"أندرتيكر", img:"https://upload.wikimedia.org/wikipedia/commons/6/63/The_Undertaker_2.jpg",
+      choices:["أندرتيكر","ستيف أوستن","جاك سوايغر","إيدج"] },
+    { hint:"مصارع معروف بحركة RKO", answer:"راندي أورتن", img:"https://upload.wikimedia.org/wikipedia/commons/6/6d/Randy_Orton_at_Royal_Rumble_2017_crop.jpg",
+      choices:["إيدج","راندي أورتن","كريس جيريكو","شين ماسا"] },
+    { hint:"بطل ذو لقب 'The Rock' وصار ممثل مشهور", answer:"ذا روك", img:"https://upload.wikimedia.org/wikipedia/commons/e/e9/Dwayne_Johnson_2014.jpg",
+      choices:["ذا روك","جولدبيرج","راينو","كين"] },
+    { hint:"مصارع أمريكي استعاد شعبية كبيرة في الألفية الجديدة وكان بطلًا", answer:"ستيف أوستن", img:"https://upload.wikimedia.org/wikipedia/commons/4/4b/Stone_Cold_Steve_Austin.jpg",
+      choices:["ستيف أوستن","ذا روك","أندرتيكر","راندي أورتن"] },
+    { hint:"مصارع معروف بحركة 'Style Claw' ووجوده في NJPW", answer:"شينسكي ناكامورا", img:"https://upload.wikimedia.org/wikipedia/commons/9/9d/Shinsuke_Nakamura_%282017%29.jpg",
+      choices:["جون سينا","شينسكي ناكامورا","كيرت أنجل","جونا هكس"] },
+    { hint:"مصارع معروف بلقب 'Beast Incarnate'", answer:"بروك ليسنر", img:"https://upload.wikimedia.org/wikipedia/commons/e/e9/Brock_Lesnar_2017.jpg",
+      choices:["بروك ليسنر","راينو","ذا روك","كين"] },
+    { hint:"مصارع أمريكي له شخصية 'The Miz' وممثل أحيانًا", answer:"ذا ميز", img:"https://upload.wikimedia.org/wikipedia/commons/2/20/The_Miz_2017.jpg",
+      choices:["ذا ميز","جون سينا","جيريكو","إدي غواريرو"] },
+    { hint:"مصارع إسباني/مكسيكي مشهور بالقفز وباستخدام قناع", answer:"ري ميستريو", img:"https://upload.wikimedia.org/wikipedia/commons/6/6e/Rey_Mysterio_2018.jpg",
+      choices:["ري ميستريو","إيدج","راندي أورتن","ذا ميز"] },
+    { hint:"مصارع قديم لقب 'Nature Boy'", answer:"ريك فلير", img:"https://upload.wikimedia.org/wikipedia/commons/8/8b/Nature_Boy_Ric_Flair2.jpg",
+      choices:["ريك فلير","أندرتيكر","ذا روك","كين"] }
+  ],
+
+  football: [
+    { hint:"لاعب أرجنتيني فاز بكأس العالم 2022 ويلعب مهاجمًا", answer:"ليونيل ميسي", img:"https://upload.wikimedia.org/wikipedia/commons/8/8c/Lionel-Messi-Argentina-2022.jpg",
+      choices:["ليونيل ميسي","كريستيانو رونالدو","نيمار","كيليان مبابي"] },
+    { hint:"مهاجم مصري يلعب لليفربول", answer:"محمد صلاح", img:"https://upload.wikimedia.org/wikipedia/commons/2/2f/Mohamed_Salah.jpg",
+      choices:["محمد صلاح","مروان محسن","مينا","تريزيجيه"] },
+    { hint:"برتغالي مشهور برقمه 7 وله مشوار طويل", answer:"كريستيانو رونالدو", img:"https://upload.wikimedia.org/wikipedia/commons/8/8c/Cristiano_Ronaldo_2018.jpg",
+      choices:["كريستيانو رونالدو","ليونيل ميسي","نيمار","هاري كين"] },
+    { hint:"حارس مرمى إسباني لعب لمانشستر يونايتد لسنوات", answer:"دافيد دي خيا", img:"https://upload.wikimedia.org/wikipedia/commons/5/5f/David_de_Gea_2017.jpg",
+      choices:["دافيد دي خيا","إيدرسون","كاسيلس","جيانلويجي بوفون"] },
+    { hint:"لاعب إنجليزي هداف يلعب لبايرن ميونخ (سابقًا توتنهام)", answer:"هاري كين", img:"https://upload.wikimedia.org/wikipedia/commons/8/8d/Harry_Kane_2018.jpg",
+      choices:["هاري كين","هاري ماجواير","رافينيا","جيرهاردو"] },
+    { hint:"لاعب هولندي مدافع في ليفربول", answer:"فيرجيل فان دايك", img:"https://upload.wikimedia.org/wikipedia/commons/1/16/Virgil_van_Dijk_2018.jpg",
+      choices:["فيرجيل فان دايك","ماتيب","راموس","بيكهام"] },
+    { hint:"لاعب فرنسي شاب مهاجم مرتبط بباريس وريال مدريد", answer:"كيليان مبابي", img:"https://upload.wikimedia.org/wikipedia/commons/9/94/Kylian_Mbapp%C3%A9_2019.jpg",
+      choices:["كيليان مبابي","كريم بنزيما","أنطوان جريزمان","نغولو كانتي"] },
+    { hint:"قائد منتخب إيطاليا وأحد أفضل المدافعين", answer:"جورجيو كيلليني", img:"https://upload.wikimedia.org/wikipedia/commons/7/7a/Giorgio_Chirico.jpg",
+      choices:["جورجيو كيلليني","باولو مالديني","ليوناردو بونوتشي","دانييلي دي روسي"] },
+    { hint:"لاعب برازيلي مشهور بالمراوغات ولعب لبرشلونة", answer:"نيمار", img:"https://upload.wikimedia.org/wikipedia/commons/c/c9/Neymar_2018.jpg",
+      choices:["نيمار","روبينيو","كوتينيو","رونالدو نازاريو"] },
+    { hint:"لاعب جزائري فاز بالألقاب مع السيتي", answer:"رياض محرز", img:"https://upload.wikimedia.org/wikipedia/commons/a/a0/Riyad_Mahrez_2018.jpg",
+      choices:["رياض محرز","سامير نصري","إسلام سليماني","يوسف العبدلي"] }
+  ],
+
+  rap: [
+    { hint:"رابر أمريكي مشهور بأغنية 'Lose Yourself' و'8 Mile'", answer:"إمينيم", img:"https://upload.wikimedia.org/wikipedia/commons/9/99/Eminem_2014.jpg",
+      choices:["إمينيم","دريك","كندريك لامار","50 سنت"] },
+    { hint:"رابر كندي مشهور بـ'God's Plan' و'Hotline Bling'", answer:"دريك", img:"https://upload.wikimedia.org/wikipedia/commons/8/80/Drake_2016.jpg",
+      choices:["دريك","درايك","بوست مالون","ترافيس سكوت"] },
+    { hint:"رابر أميركي قدم ألبوم 'To Pimp a Butterfly' و'HUMBLE.'", answer:"كيندريك لامار", img:"https://upload.wikimedia.org/wikipedia/commons/0/0f/Kendrick_Lamar_on_the_2015_Festival_Superstar_%28cropped%29.jpg",
+      choices:["كيندريك لامار","إمينيم","جاي-زي","نوتورياس بي. آي. جي"] },
+    { hint:"رابر أميركي اشتهر في أوائل الألفينات بأغنية 'In Da Club'", answer:"50 سنت", img:"https://upload.wikimedia.org/wikipedia/commons/7/7b/50cent_2008.jpg",
+      choices:["50 سنت","إمينيم","سنوپ دوغ","دكتور دري"] },
+    { hint:"رابر أمريكي وأسطورة من ديترويت واعتبر واحد من أفضل الكتاب", answer:"ناس", img:"https://upload.wikimedia.org/wikipedia/commons/0/0c/Nas_%28cropped%29.jpg",
+      choices:["ناس","إمينيم","جي-زي","كوني"] },
+    { hint:"رابر ومغني مصري شاب وشهير (مثال محلي)", answer:"ويجز", img:"https://upload.wikimedia.org/wikipedia/commons/7/70/Wegz.jpg",
+      choices:["ويجز","أبيوسف","مروان موسى","شبراوي"] },
+    { hint:"رابر أمريكي سجل 'Sicko Mode'", answer:"ترافيس سكوت", img:"https://upload.wikimedia.org/wikipedia/commons/d/d8/Travis_Scott_2019.jpg",
+      choices:["ترافيس سكوت","دريك","كندريك لامار","بوست مالون"] },
+    { hint:"رابر من مدرسة الـBattle وكتب أغاني قوية وواقعية", answer:"جاي-زي", img:"https://upload.wikimedia.org/wikipedia/commons/9/96/Jay-Z_Met_Gala_2019.png",
+      choices:["جاي-زي","ناس","كندريك","دريك"] },
+    { hint:"رابر معروف بصوته القاسي وأغاني الشوارع من نيويورك", answer:"نوتورياس بي. آي. جي", img:"https://upload.wikimedia.org/wikipedia/commons/3/33/Notorious_BIG_Coachella_1997.jpg",
+      choices:["نوتورياس بي. آي. جي","توباك","جي-زي","ناس"] },
+    { hint:"رابر وموسيقار أميركي شهير تأثر به الكثيرون وكتب 'Stan'", answer:"إمينيم", img:"https://upload.wikimedia.org/wikipedia/commons/9/99/Eminem_2014.jpg",
+      choices:["إمينيم","دريك","كندريك لامار","50 سنت"] }
+  ],
+
+  actor: [
+    { hint:"ممثل لعب دور 'آيرون مان' في سلسلة مارفل", answer:"روبرت داوني جونيور", img:"https://upload.wikimedia.org/wikipedia/commons/2/2a/Robert_Downey_Jr_2012.jpg",
+      choices:["روبرت داوني جونيور","كريس إيفانز","كريس هيمسورث","توم هولاند"] },
+    { hint:"ممثل بريطاني لعب دور 'هاري بوتر'", answer:"دانيال رادكليف", img:"https://upload.wikimedia.org/wikipedia/commons/0/02/Daniel_Radcliffe_by_Gage_Skidmore_2.jpg",
+      choices:["دانيال رادكليف","إما واتسون","روبيرت باتينسون","جوني ديب"] },
+    { hint:"ممثل هوليوودي بطل 'تايتنك'", answer:"ليوناردو دي كابريو", img:"https://upload.wikimedia.org/wikipedia/commons/5/52/Leonardo_DiCaprio_2014.jpg",
+      choices:["ليوناردو دي كابريو","براد بيت","مات دامون","توم كروز"] },
+    { hint:"ممثل ومصارع سابق ونجوم هوليوود 'ذا روك'، اسمه الحقيقي", answer:"دواين جونسون", img:"https://upload.wikimedia.org/wikipedia/commons/e/e9/Dwayne_Johnson_2014.jpg",
+      choices:["دواين جونسون","ذا روك","جون سينا","ستيف أوستن"] },
+    { hint:"ممثل مشهور بفيلم The Matrix", answer:"كيانو ريفز", img:"https://upload.wikimedia.org/wikipedia/commons/6/6e/Keanu_Reeves_2016.jpg",
+      choices:["كيانو ريفز","هيو جاكمان","توم كروز","براد بيت"] },
+    { hint:"ممثل كوميدي مصري عريق (مثال محلي)", answer:"عادل إمام", img:"https://upload.wikimedia.org/wikipedia/commons/5/53/Adel_Emam.jpg",
+      choices:["عادل إمام","محمد سعد","أحمد حلمي","عمرو واكد"] },
+    { hint:"ممثل بطل 'Deadpool'", answer:"رايان رينولدز", img:"https://upload.wikimedia.org/wikipedia/commons/6/6b/Ryan_Reynolds_2018.jpg",
+      choices:["رايان رينولدز","هيو جاكمان","توم هولاند","تشارليز ثيرون"] },
+    { hint:"ممثل استرالي لعب دور ثور في مارفل", answer:"كريس هيمسورث", img:"https://upload.wikimedia.org/wikipedia/commons/1/1e/Chris_Hemsworth_2014.jpg",
+      choices:["كريس هيمسورث","روبرت داوني","كريس إيفانز","تام هاردي"] },
+    { hint:"ممثل شهير ظهر في 'The Wolf of Wall Street'", answer:"ليوناردو دي كابريو", img:"https://upload.wikimedia.org/wikipedia/commons/5/52/Leonardo_DiCaprio_2014.jpg",
+      choices:["ليوناردو دي كابريو","مارك والبرج","براد بيت","موينما"] },
+    { hint:"ممثل مصري شاب مشهور بأعمال درامية", answer:"أحمد السقا", img:"https://upload.wikimedia.org/wikipedia/commons/8/85/Ahmed_El_Sakka.jpg",
+      choices:["أحمد السقا","أمير كرارة","محمد رمضان","أحمد عز"] }
+  ]
+};
+
+let state = {
+  category: null,
+  questions: [],
+  index: 0,
+  score: 0
+};
+
+// عناصر الصفحة
+const startPanel = document.getElementById('start-panel');
+const gamePanel = document.getElementById('game-panel');
+const startBtn = document.getElementById('start-btn');
+const catBtns = document.querySelectorAll('.cat-btn');
+const hintEl = document.getElementById('hint');
+const choicesEl = document.getElementById('choices');
+const imgEl = document.getElementById('character-img');
+const nextBtn = document.getElementById('next-btn');
+const skipBtn = document.getElementById('skip-btn');
+const qnumEl = document.getElementById('qnum');
+const qtotalEl = document.getElementById('qtotal');
+const scoreEl = document.getElementById('score');
+const progbar = document.getElementById('progbar');
+const statusEl = document.getElementById('status');
+const finishNote = document.getElementById('finish-note');
+
+// اختيار فئة (تظليل)
+catBtns.forEach(b=>{
+  b.addEventListener('click', ()=>{
+    catBtns.forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    state.category = b.dataset.cat;
+  });
+});
+
+// ابدأ اللعبة
+startBtn.addEventListener('click', ()=>{
+  if(!state.category){ alert('اختر فئة أولاً'); return; }
+  startPanel.style.display='none';
+  gamePanel.style.display='flex';
+  startGame();
+});
+
+function startGame(){
+  // انسخ الأسئلة من DB للفئة المختارة وشوف الــ 10 أسئلة
+  const pool = DB[state.category] || [];
+  // لو أقل من 10 خليه كل اللي موجود
+  const copy = [...pool];
+  // خلط
+  shuffle(copy);
+  state.questions = copy.slice(0, Math.min(10, copy.length));
+  state.index=0;
+  state.score=0;
+  scoreEl.textContent = state.score;
+  qtotalEl.textContent = state.questions.length;
+  loadQuestion();
+}
+
+function loadQuestion(){
+  const q = state.questions[state.index];
+  // اعرض التلميح
+  hintEl.textContent = q.hint;
+  // اعادة الضبط
+  imgEl.style.display='none';
+  imgEl.src='';
+  nextBtn.style.display='none';
+  statusEl.textContent = '';
+  // اختيارات - خلط
+  const c = [...q.choices];
+  shuffle(c);
+  choicesEl.innerHTML = '';
+  c.forEach(choiceText=>{
+    const btn = document.createElement('button');
+    btn.className='choice';
+    btn.innerText = choiceText;
+    btn.onclick = ()=>onChoose(btn, choiceText, q);
+    choicesEl.appendChild(btn);
+  });
+  qnumEl.textContent = state.index + 1;
+  // تقدم
+  const percent = Math.round((state.index / state.questions.length) * 100);
+  progbar.style.width = percent + '%';
+}
+
+function onChoose(btn, chosen, q){
+  // منع الضغط المتكرر بعد اختيار
+  if(btn.classList.contains('disabled')) return;
+  const all = document.querySelectorAll('.choice');
+  all.forEach(x=>x.classList.add('disabled'));
+  // لو صح
+  if(chosen === q.answer){
+    btn.classList.add('correct');
+    statusEl.textContent = '✅ إجابة صحيحة!';
+    state.score += 10;
+    scoreEl.textContent = state.score;
+    // اظهار الصورة
+    imgEl.src = q.img;
+    imgEl.style.display = 'block';
+    // اظهار التالي
+    nextBtn.style.display='inline-block';
+  } else {
+    btn.classList.add('wrong');
+    statusEl.textContent = '❌ إجابة خاطئة! حاول مرة أخرى أو اضغط "تخطي"';
+    // لا نخصم نقاط بشكل افتراضي، تقدر تعدل هنا
+  }
+}
+
+nextBtn.addEventListener('click', ()=>{
+  state.index++;
+  if(state.index < state.questions.length){
+    loadQuestion();
+  } else {
+    finishGame();
+  }
+});
+
+skipBtn.addEventListener('click', ()=>{
+  // انتقل للسؤال التالي بدون اكتساب نقاط (أو اخسر نقاط لو حابب)
+  state.index++;
+  if(state.index < state.questions.length){
+    loadQuestion();
+  } else finishGame();
+});
+
+function finishGame(){
+  hintEl.textContent = '🏆 انتهت السلسلة!';
+  choicesEl.innerHTML = '';
+  imgEl.style.display='none';
+  nextBtn.style.display='none';
+  statusEl.innerHTML = `النقاط النهائية: <span style="font-weight:800;color:var(--accent)">${state.score}</span>`;
+  finishNote.style.display='block';
+  finishNote.innerHTML = `<button class="btn primary" onclick="backToStart()">اختر نوع آخر</button>`;
+}
+
+function backToStart(){
+  startPanel.style.display='block';
+  gamePanel.style.display='none';
+  // ازالة التظليل من الكاتيجوري
+  catBtns.forEach(x=>x.classList.remove('active'));
+  state.category = null;
+}
+
+// أداة خلط
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+}
+
+/* تحميل افتراضي: لو المستخدم لم يضغط Start ونظام يختار أول فئة */
+document.addEventListener('DOMContentLoaded', ()=>{
+  // اختياري: تفعيل أول زر تلقائيًا
+  // catBtns[0].classList.add('active'); state.category = catBtns[0].dataset.cat;
+});
+</script>
+</body>
+</html>
